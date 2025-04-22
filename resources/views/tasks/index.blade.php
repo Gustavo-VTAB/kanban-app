@@ -2,12 +2,96 @@
 
 @section('content')
 <div class="container">
-    <h1>Tarefas</h1>
-    <a href="{{ route('tasks.create') }}" class="btn btn-primary">Nova Tarefa</a>
-    <ul>
-        @foreach ($tasks as $task)
-            <li>{{ $task->title }} - {{ $task->status }}</li>
+    <h1>Tarefas & Kanban</h1>
+
+    <a href="{{ route('tasks.create') }}" class="btn btn-primary mb-4">Nova Tarefa</a>
+
+    <div class="row">
+        @foreach (['to_do' => 'A Fazer', 'in_progress' => 'Em Progresso', 'done' => 'Concluído'] as $status => $label)
+            <div class="col-md-4">
+                <h3>{{ $label }}</h3>
+                <div class="card p-2 mb-3" id="{{ $status }}">
+                    @foreach ($tasks->where('status', $status) as $task)
+                    <div class="card p-2 mb-2 task-item" 
+                        data-id="{{ $task->id }}"
+                        data-title="{{ $task->title }}"
+                        data-description="{{ $task->description }}"
+                        data-due-date="{{ $task->due_date }}">
+                        <strong>{{ $task->title }}</strong>
+                        <p class="mb-0">{{ $task->due_date }}</p>
+                    </div>
+
+                    @endforeach
+                </div>
+            </div>
         @endforeach
-    </ul>
+    </div>
 </div>
+
+<!-- Modal -->
+<div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="taskModalLabel">Detalhes da Tarefa</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <h4 id="modalTitle"></h4>
+        <p id="modalDescription"></p>
+        <p><strong>Data Limite:</strong> <span id="modalDueDate"></span></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+@endsection
+
+@section('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+ // Inicializa Sortable nas colunas
+['to_do', 'in_progress', 'done'].forEach(function(status) {
+    new Sortable(document.getElementById(status), {
+        group: 'shared',
+        animation: 150,
+        onEnd: function (evt) {
+            let taskId = evt.item.dataset.id;
+            let newStatus = evt.to.id;
+
+            fetch("{{ route('tasks.updateStatus') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({
+                    id: taskId,
+                    status: newStatus
+                })
+            });
+        }
+    });
+});
+
+// Delegação de evento de clique no container pai
+document.querySelectorAll('.card.p-2.mb-3').forEach(function(container) {
+    container.addEventListener('click', function(event) {
+        // só continua se clicou em um .task-item
+        if (event.target.closest('.task-item')) {
+            let item = event.target.closest('.task-item');
+
+            document.getElementById('modalTitle').innerText = item.dataset.title;
+            document.getElementById('modalDescription').innerText = item.dataset.description || 'Sem descrição';
+            document.getElementById('modalDueDate').innerText = item.dataset.dueDate || 'Sem data limite';
+
+            var taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+            taskModal.show();
+        }
+    });
+});
+
+
+</script>
 @endsection
