@@ -40,6 +40,27 @@
         <h4 id="modalTitle"></h4>
         <p id="modalDescription"></p>
         <p><strong>Data Limite:</strong> <span id="modalDueDate"></span></p>
+
+        <button id="deleteTaskButton" class="btn btn-danger">Deletar Tarefa</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmDeleteLabel">Confirmar Exclusão</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        Tem certeza que deseja excluir esta tarefa?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="confirmDeleteButton" class="btn btn-danger">Excluir</button>
       </div>
     </div>
   </div>
@@ -87,10 +108,61 @@ document.querySelectorAll('.card.p-2.mb-3').forEach(function(container) {
             document.getElementById('modalDueDate').innerText = item.dataset.dueDate || 'Sem data limite';
 
             var taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+            
+            document.getElementById('deleteTaskButton').setAttribute('data-id', item.dataset.id);
+            document.getElementById('taskModal').style.display = 'block';
+
             taskModal.show();
         }
     });
 });
+
+
+let taskIdToDelete = null;
+
+document.getElementById('deleteTaskButton').addEventListener('click', function () {
+  taskIdToDelete = this.getAttribute('data-id');
+
+  var taskModal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
+  taskModal.hide();
+
+  var confirmModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+  confirmModal.show();
+});
+
+document.getElementById('confirmDeleteButton').addEventListener('click', function () {
+  if (taskIdToDelete) {
+    deleteTask(taskIdToDelete);
+  }
+});
+
+function deleteTask(taskId) {
+  fetch("/tasks/" + taskId, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-TOKEN': '{{ csrf_token() }}'
+    }
+  })
+    .then(response => {
+      if (response.ok) {
+        var taskModal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
+        var confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+
+        taskModal.hide();
+        confirmModal.hide();
+
+        document.querySelector('[data-id="' + taskId + '"]').remove();
+      } else {
+        alert('Erro ao deletar.');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+    });
+}
+
+
 
 
 </script>
