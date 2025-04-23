@@ -1,0 +1,11 @@
+{
+  "build": {
+    "command": "composer install"
+  },
+  "start": {
+    "command": "php artisan serve --host=0.0.0.0 --port=$PORT"
+  },
+  "postDeploy": {
+    "command": "php artisan migrate --force"
+  }
+}
