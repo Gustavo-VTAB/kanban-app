@@ -113,39 +113,40 @@ class TaskController extends Controller
     // Atualizar no Google Calendar
     if (Session::has('google_token') && $task->google_event_id) {
         $client = new \Google_Client();
-        $token = Session::get('google_token');
-
-        if (!is_array($token) || !isset($token['access_token'])) {
-            return redirect()->route('tasks.index')->with('error', 'Token Google inválido. Faça login novamente.');
-        }
-
-        $client->setAccessToken($token);
-
+        $client->setAccessToken(Session::get('google_token'));
+    
         if ($client->isAccessTokenExpired()) {
-            try {
-                $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-                Session::put('google_token', $client->getAccessToken());
-            } catch (\Exception $e) {
-                return redirect()->route('tasks.index')->with('error', 'Erro ao renovar token. Faça login novamente.');
-            }
+            $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+            Session::put('google_token', $client->getAccessToken());
         }
-
+    
+        $service = new \Google_Service_Calendar($client);
+    
         try {
-            $service = new \Google_Service_Calendar($client);
             $event = $service->events->get('primary', $task->google_event_id);
 
             $event->setSummary($task->title);
             $event->setDescription($task->description);
-            $event->setStart(['date' => $task->due_date, 'timeZone' => 'America/Sao_Paulo']);
-            $event->setEnd(['date' => $task->due_date, 'timeZone' => 'America/Sao_Paulo']);
-
+            
+            // Corrigido aqui:
+            $start = new \Google_Service_Calendar_EventDateTime();
+            $start->setDate($task->due_date);
+            $start->setTimeZone('America/Sao_Paulo');
+            
+            $end = new \Google_Service_Calendar_EventDateTime();
+            $end->setDate($task->due_date);
+            $end->setTimeZone('America/Sao_Paulo');
+            
+            $event->setStart($start);
+            $event->setEnd($end);
+            
             $service->events->update('primary', $event->getId(), $event);
         } catch (\Exception $e) {
-            return redirect()->route('tasks.index')->with('error', 'Erro ao atualizar o evento no Google Calendar.');
+            \Log::error('Erro ao atualizar evento: ' . $e->getMessage());
         }
     }
-
-    return redirect()->route('tasks.index')->with('success', 'Tarefa atualizada com sucesso!');
+    return redirect()->route('tasks.index')->with('success', 'Tarefa atualizada com sucesso!');            
+    
 }
 
     public function destroy($id)
@@ -153,8 +154,26 @@ class TaskController extends Controller
         $task = Task::find($id);
 
         if ($task) {
+            if (Session::has('google_token') && $task->google_event_id) {
+                $client = new \Google_Client();
+                $client->setAccessToken(Session::get('google_token'));
+            
+                if ($client->isAccessTokenExpired()) {
+                    $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+                    Session::put('google_token', $client->getAccessToken());
+                }
+            
+                $service = new \Google_Service_Calendar($client);
+            
+                try {
+                    $service->events->delete('primary', $task->google_event_id);
+                } catch (\Exception $e) {
+                    \Log::error('Erro ao excluir evento: ' . $e->getMessage());
+                }
+            }
             $task->delete();
             return response()->json(['success' => true]);
+            
         }
 
         return response()->json(['error' => 'Tarefa não encontrada'], 404);

@@ -17,45 +17,47 @@
     @endif
 
 
-    <div class="row">
-        @foreach (['to_do' => 'A Fazer', 'in_progress' => 'Em Progresso', 'done' => 'Concluído'] as $status => $label)
-            <div class="col-md-4">
-                <h3>{{ $label }}</h3>
-                <div class="card p-2 mb-3" id="{{ $status }}">
-                    @foreach ($tasks->where('status', $status) as $task)
-                    <div class="card p-2 mb-2 task-item" 
-                        data-id="{{ $task->id }}"
-                        data-title="{{ $task->title }}"
-                        data-description="{{ $task->description }}"
-                        data-due-date="{{ $task->due_date }}">
-                        <strong>{{ $task->title }}</strong>
-                        <p class="mb-0">{{ $task->due_date }}</p>
-                    </div>
-
-                    @endforeach
-                </div>
-            </div>
-        @endforeach
-    </div>
+      <div class="row">
+      @foreach (['to_do' => 'A Fazer', 'in_progress' => 'Em Progresso', 'done' => 'Concluído'] as $status => $label)
+          <div class="col-md-4">
+              <div class="card shadow-sm rounded-4 mb-4">
+                  <div class="card-header bg-light border-0 text-center fw-bold text-primary">
+                      {{ $label }}
+                  </div>
+                  <div class="card-body bg-white" id="{{ $status }}" style="min-height: 200px;">
+                      @foreach ($tasks->where('status', $status) as $task)
+                          <div class="card task-item p-2 mb-3 shadow-sm border-start border-4 border-primary rounded-3"
+                              style="cursor: grab;"
+                              data-id="{{ $task->id }}"
+                              data-title="{{ $task->title }}"
+                              data-description="{{ $task->description }}"
+                              data-due-date="{{ $task->due_date }}">
+                              <strong>{{ $task->title }}</strong>
+                              <p class="mb-0 text-muted small">{{ $task->due_date }}</p>
+                          </div>
+                      @endforeach
+                  </div>
+              </div>
+          </div>
+      @endforeach
+  </div>
 </div>
 
 
-<div class="container justify-content-center">
-  <h2 class="mb-4">Calendário</h2>
-  <p class="mb-4">Visualize suas tarefas no Google Calendar.</p>
+<div class="container text-center mt-5">
+  <h2 class="mb-3 fw-bold text-secondary">🗓️ Seu Calendário</h2>
+  <p class="text-muted">Visualize suas tarefas diretamente no Google Calendar</p>
 
-  <div class="alert alert-info mb-4" role="alert">
-    Para adicionar uma tarefa ao Google Calendar, clique na tarefa e depois clique no botão "Adicionar ao Google Calendar".
+  <div class="alert alert-info shadow-sm rounded-3 mt-3">
+    Para adicionar uma tarefa ao calendário, clique na tarefa e depois em "Adicionar ao Google Calendar".
   </div>
 
-  <div class="calendar-container mb-5 d-flex justify-content-center">
-  <iframe 
-    src="https://calendar.google.com/calendar/embed?src=gust.inbug%40gmail.com&ctz=America%2FSao_Paulo" ]
-    style="border: 0" 
-    width="800" 
-    height="600" 
-    frameborder="0" 
-    scrolling="no"></iframe>
+  <div class="calendar-container d-flex justify-content-center my-4">
+    <iframe 
+      src="https://calendar.google.com/calendar/embed?src=gust.inbug%40gmail.com&ctz=America%2FSao_Paulo"
+      style="border:0; width:100%; max-width:900px; height:600px; border-radius:10px;" 
+      frameborder="0" 
+      scrolling="no"></iframe>
   </div>
 </div>
 
@@ -79,11 +81,11 @@
           </form>
           
           
+          <div class="modal-footer">
+            <button id="deleteTaskButton" class="btn btn-danger">Deletar Tarefa</button>
+            <button class="btn btn-primary" id="openEditModal">Editar Tarefa</button>
         </div>
-        <div class="modal-footer">
-          <button id="deleteTaskButton" class="btn btn-danger">Deletar Tarefa</button>
-          <button class="btn btn-primary" id="openEditModal">Editar Tarefa</button>
-      </div>
+        </div>
     </div>
   </div>
 </div>
@@ -144,139 +146,125 @@
 </div>
 
 @section('scripts')
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-  <script>
-    // Inicializa Sortable nas colunas
-    ['to_do', 'in_progress', 'done'].forEach(function(status) {
-        new Sortable(document.getElementById(status), {
-            group: 'shared',
-            animation: 150,
-            onEnd: function (evt) {
-                let taskId = evt.item.dataset.id;
-                let newStatus = evt.to.id;
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  // 🔁 Drag & Drop com Sortable
+  ['to_do', 'in_progress', 'done'].forEach(function (status) {
+    new Sortable(document.getElementById(status), {
+      group: 'shared',
+      animation: 150,
+      onEnd: function (evt) {
+        const taskId = evt.item.dataset.id;
+        const newStatus = evt.to.id;
 
-                fetch("{{ route('tasks.updateStatus') }}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    body: JSON.stringify({
-                        id: taskId,
-                        status: newStatus
-                    })
-                });
-            }
+        fetch("{{ route('tasks.updateStatus') }}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+          },
+          body: JSON.stringify({ id: taskId, status: newStatus })
         });
+      }
     });
+  });
 
-    // Delegação de evento de clique no container pai
-    document.querySelectorAll('.card.p-2.mb-3').forEach(function(container) {
-        container.addEventListener('click', function(event) {
-            // só continua se clicou em um .task-item
-            if (event.target.closest('.task-item')) {
-                let item = event.target.closest('.task-item');
+  // 💬 Abertura de modal de detalhes da tarefa + configuração do botão de editar
+  document.querySelectorAll('.card.p-2.mb-3').forEach(function (container) {
+    container.addEventListener('click', function (event) {
+      const item = event.target.closest('.task-item');
+      if (!item) return;
 
-                document.getElementById('modalTitle').innerText = item.dataset.title;
-                document.getElementById('modalDescription').innerText = item.dataset.description || 'Sem descrição';
-                document.getElementById('modalDueDate').innerText = item.dataset.dueDate || 'Sem data limite';
-
-                var taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
-
-                document.getElementById('taskModal').dataset.id = item.dataset.id;
-
-
-                document.getElementById('deleteTaskButton').setAttribute('data-id', item.dataset.id);
-                document.getElementById('taskModal').style.display = 'block';
-
-                taskModal.show();
-            }
-        });
-    });
-
-
-    let taskIdToDelete = null;
-
-    document.getElementById('deleteTaskButton').addEventListener('click', function () {
-      taskIdToDelete = this.getAttribute('data-id');
-
-      var taskModal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
-      taskModal.hide();
-
-      var confirmModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-      confirmModal.show();
-    });
-
-    // Delegação de clique nas tarefas
-document.querySelectorAll('.card.p-2.mb-3').forEach(function(container) {
-  container.addEventListener('click', function(event) {
-    if (event.target.closest('.task-item')) {
-      let item = event.target.closest('.task-item');
-
+      // Preenche modal de visualização
       document.getElementById('modalTitle').innerText = item.dataset.title;
       document.getElementById('modalDescription').innerText = item.dataset.description || 'Sem descrição';
       document.getElementById('modalDueDate').innerText = item.dataset.dueDate || 'Sem data limite';
-
       document.getElementById('taskModal').dataset.id = item.dataset.id;
       document.getElementById('deleteTaskButton').setAttribute('data-id', item.dataset.id);
 
-      const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
-      taskModal.show();
+      // Abre modal de detalhes
+      new bootstrap.Modal(document.getElementById('taskModal')).show();
 
-      // ✅ AQUI! Agora sim funciona
+      // Configura botão "Editar"
       document.getElementById('openEditModal').onclick = function () {
         document.getElementById('editTaskId').value = item.dataset.id;
         document.getElementById('editTitle').value = item.dataset.title;
         document.getElementById('editDescription').value = item.dataset.description || '';
         document.getElementById('editDueDate').value = item.dataset.dueDate || '';
 
-        bootstrap.Modal.getInstance(document.getElementById('taskModal')).hide();
-        new bootstrap.Modal(document.getElementById('editTaskModal')).show();
-
+        forceCloseModals();
         document.getElementById('editTaskForm').action = `/tasks/${item.dataset.id}`;
+        new bootstrap.Modal(document.getElementById('editTaskModal')).show();
       };
+    });
+  });
+
+  // 🗑️ Exclusão: abre modal de confirmação
+  let taskIdToDelete = null;
+  document.getElementById('deleteTaskButton').addEventListener('click', function () {
+    taskIdToDelete = this.getAttribute('data-id');
+    bootstrap.Modal.getInstance(document.getElementById('taskModal')).hide();
+    forceCloseModals();
+    new bootstrap.Modal(document.getElementById('confirmDeleteModal')).show();
+  });
+
+  // 🗑️ Exclusão: confirmação
+  document.getElementById('confirmDeleteButton').addEventListener('click', function () {
+    if (taskIdToDelete) {
+      deleteTask(taskIdToDelete);
+    }
+  });
+
+  // 🔁 Função de deletar via AJAX
+  function deleteTask(taskId) {
+    fetch(`/tasks/${taskId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+      }
+    })
+      .then(response => {
+        if (response.ok) {
+          // Remove visualmente
+          document.querySelector(`[data-id="${taskId}"]`)?.remove();
+          
+          forceCloseModals();
+
+          // Atualiza o iframe do Google Calendar
+          document.querySelector('iframe')?.setAttribute('src', document.querySelector('iframe')?.getAttribute('src'));
+
+        } else {
+          alert('Erro ao deletar tarefa.');
+        }
+      })
+      .catch(error => {
+        console.error('Erro:', error);
+      });
+  }
+
+  // 💥 Remove backdrop e estado de modal travado
+  function forceCloseModals() {
+    document.querySelectorAll('.modal.show').forEach(modal => {
+      bootstrap.Modal.getInstance(modal)?.hide();
+    });
+
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+      backdrop.remove();
+    });
+
+    document.body.classList.remove('modal-open');
+    document.body.style = '';
+  }
+
+  // ⛑️ Fallback: se o ESC for pressionado e sobrar backdrop, remove
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      forceCloseModals();
     }
   });
 });
+</script>
 
-
-
-
-
-    document.getElementById('confirmDeleteButton').addEventListener('click', function () {
-      if (taskIdToDelete) {
-        deleteTask(taskIdToDelete);
-      }
-    });
-
-    function deleteTask(taskId) {
-      fetch("/tasks/" + taskId, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        }
-      })
-        .then(response => {
-          if (response.ok) {
-            var taskModal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
-            var confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
-
-            taskModal.hide();
-            confirmModal.hide();
-
-            document.querySelector('[data-id="' + taskId + '"]').remove();
-          } else {
-            alert('Erro ao deletar.');
-          }
-        })
-        .catch(error => {
-          console.error('Erro:', error);
-        });
-    }
-
-    
-
-
-  </script>
 @endsection
