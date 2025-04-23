@@ -4,7 +4,6 @@
     "buildCommand": "composer install --no-dev --optimize-autoloader && php artisan config:cache"
   },
   "deploy": {
-    "startCommand": "php artisan serve --host=0.0.0.0 --port=$PORT",
-    "postDeployCommand": "php artisan migrate --force && echo 'POST DEPLOY CONCLUÍDO'"
+    "startCommand": "php artisan serve --host=0.0.0.0 --port=$PORT"
   }
 }
