@@ -118,4 +118,29 @@ class TaskController extends Controller
         return response()->json(['error' => 'Tarefa não encontrada'], 404);
     }
 
+    public function syncWithGoogle(Task $task)
+    {
+        if (!Session::has('google_token')) {
+            return redirect()->back()->with('error', 'Conecte com sua conta Google antes.');
+        }
+
+        $client = new \Google_Client();
+        $client->setAccessToken(Session::get('google_token'));
+        $service = new \Google_Service_Calendar($client);
+
+        $event = new \Google_Service_Calendar_Event([
+            'summary' => $task->title,
+            'description' => $task->description,
+            'start' => ['date' => $task->due_date],
+            'end' => ['date' => $task->due_date],
+        ]);
+
+        $createdEvent = $service->events->insert('primary', $event);
+        $task->google_event_id = $createdEvent->getId();
+        $task->save();
+
+        return redirect()->back()->with('success', 'Tarefa sincronizada com o Google Calendar!');
+    }
+
+
 }

@@ -39,6 +39,27 @@
     </div>
 </div>
 
+
+<div class="container justify-content-center">
+  <h2 class="mb-4">Calendário</h2>
+  <p class="mb-4">Visualize suas tarefas no Google Calendar.</p>
+
+  <div class="alert alert-info mb-4" role="alert">
+    Para adicionar uma tarefa ao Google Calendar, clique na tarefa e depois clique no botão "Adicionar ao Google Calendar".
+  </div>
+
+  <div class="calendar-container mb-5 d-flex justify-content-center">
+  <iframe 
+    src="https://calendar.google.com/calendar/embed?src=gust.inbug%40gmail.com&ctz=America%2FSao_Paulo" ]
+    style="border: 0" 
+    width="800" 
+    height="600" 
+    frameborder="0" 
+    scrolling="no"></iframe>
+  </div>
+</div>
+
+
 <!-- Modal -->
 <div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -52,6 +73,14 @@
         <p id="modalDescription"></p>
         <p><strong>Data Limite:</strong> <span id="modalDueDate"></span></p>
 
+        <form action="{{ route('tasks.sync', $task->id) }}" method="POST">
+            @csrf
+            <button type="submit" class="btn btn-sm btn-outline-primary">Adicionar ao Google Calendar</button>
+        </form>
+
+
+      </div>
+      <div class="modal-footer">
         <button id="deleteTaskButton" class="btn btn-danger">Deletar Tarefa</button>
       </div>
     </div>

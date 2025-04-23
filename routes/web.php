@@ -21,3 +21,5 @@ Route::post('/tasks/update-status', [TaskController::class, 'updateStatus'])->na
 
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.auth');
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
+
+Route::post('/tasks/{task}/sync', [TaskController::class, 'syncWithGoogle'])->name('tasks.sync');
