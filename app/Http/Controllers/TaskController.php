@@ -4,10 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Session; 
+use Google_Client;
+use Google_Service_Calendar;
+use Google_Service_Calendar_Event;
 
 class TaskController extends Controller
 {
-    /**
+    /** 
      * Display a listing of the resource.
      */
     public function index()
@@ -43,9 +47,34 @@ class TaskController extends Controller
         $task->due_date = $request->due_date;
         $task->user_id = auth()->id();
         $task->assigned_to = $request->assigned_to;
-        $task->status = 'to_do';
-        $task->save();
-    
+
+        if (Session::has('google_token')) {
+            $client = new Google_Client();
+            $client->setAccessToken(Session::get('google_token'));
+
+            $service = new Google_Service_Calendar($client);
+
+            $event = new Google_Service_Calendar_Event([
+                'summary' => $task->title,
+                'description' => $task->description,
+                'start' => [
+                    'date' => $task->due_date,
+                    'timeZone' => 'America/Sao_Paulo',
+                ],
+                'end' => [
+                    'date' => $task->due_date,
+                    'timeZone' => 'America/Sao_Paulo',
+                ],
+            ]);
+
+            $createdEvent = $service->events->insert('primary', $event);
+
+            // (Opcional) Salvar o ID do evento para editar/excluir depois
+            $task->google_event_id = $createdEvent->getId();
+            $task->save();
+        }
+
+        
         return redirect()->route('tasks.index')->with('success', 'Tarefa criada com sucesso!');
     }
     
@@ -80,7 +109,7 @@ class TaskController extends Controller
     public function destroy($id)
     {
         $task = Task::find($id);
-        
+
         if ($task) {
             $task->delete();
             return response()->json(['success' => true]);

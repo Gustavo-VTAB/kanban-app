@@ -6,6 +6,17 @@
 
     <a href="{{ route('tasks.create') }}" class="btn btn-primary mb-4">Nova Tarefa</a>
 
+    @if (!Session::has('google_token'))
+        <a href="{{ route('google.auth') }}" class="btn btn-danger mb-3">
+            <i class="bi bi-google"></i> Conectar com Google
+        </a>
+    @else
+        <div class="alert alert-success mb-3">
+            Conta Google conectada com sucesso ✅
+        </div>
+    @endif
+
+
     <div class="row">
         @foreach (['to_do' => 'A Fazer', 'in_progress' => 'Em Progresso', 'done' => 'Concluído'] as $status => $label)
             <div class="col-md-4">
