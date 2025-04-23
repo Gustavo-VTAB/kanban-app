@@ -1,6 +1,10 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
-  "buildCommand": "composer install --no-dev --optimize-autoloader && php artisan config:cache",
-  "startCommand": "php artisan serve --host=0.0.0.0 --port=$PORT",
-  "postDeployCommand": "sh -c 'php artisan migrate --force && echo POST DEPLOY CONCLUÍDO'"
+  "build": {
+    "buildCommand": "composer install --no-dev --optimize-autoloader && php artisan config:cache"
+  },
+  "deploy": {
+    "startCommand": "php artisan serve --host=0.0.0.0 --port=$PORT",
+    "postDeployCommand": "php artisan migrate --force && echo 'POST DEPLOY CONCLUÍDO'"
+  }
 }
