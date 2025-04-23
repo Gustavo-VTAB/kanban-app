@@ -2,10 +2,5 @@
   "$schema": "https://railway.com/railway.schema.json",
   "buildCommand": "composer install --no-dev --optimize-autoloader && php artisan config:cache",
   "startCommand": "php artisan serve --host=0.0.0.0 --port=$PORT",
-  "deploy": {
-    "numReplicas": 1,
-    "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10
-  },
-  "postDeployCommand": "php artisan migrate --force"
+  "postDeployCommand": "echo 'EXECUTANDO POST DEPLOY'"
 }
