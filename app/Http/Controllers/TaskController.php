@@ -99,13 +99,55 @@ class TaskController extends Controller
      * Update the specified resource in storage.
      */
     public function update(Request $request, Task $task)
-    {
-        //
+{
+    $request->validate([
+        'title' => 'required',
+        'due_date' => 'nullable|date',
+    ]);
+
+    $task->title = $request->title;
+    $task->description = $request->description;
+    $task->due_date = $request->due_date;
+    $task->save();
+
+    // Atualizar no Google Calendar
+    if (Session::has('google_token') && $task->google_event_id) {
+        $client = new \Google_Client();
+        $token = Session::get('google_token');
+
+        if (!is_array($token) || !isset($token['access_token'])) {
+            return redirect()->route('tasks.index')->with('error', 'Token Google inválido. Faça login novamente.');
+        }
+
+        $client->setAccessToken($token);
+
+        if ($client->isAccessTokenExpired()) {
+            try {
+                $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+                Session::put('google_token', $client->getAccessToken());
+            } catch (\Exception $e) {
+                return redirect()->route('tasks.index')->with('error', 'Erro ao renovar token. Faça login novamente.');
+            }
+        }
+
+        try {
+            $service = new \Google_Service_Calendar($client);
+            $event = $service->events->get('primary', $task->google_event_id);
+
+            $event->setSummary($task->title);
+            $event->setDescription($task->description);
+            $event->setStart(['date' => $task->due_date, 'timeZone' => 'America/Sao_Paulo']);
+            $event->setEnd(['date' => $task->due_date, 'timeZone' => 'America/Sao_Paulo']);
+
+            $service->events->update('primary', $event->getId(), $event);
+        } catch (\Exception $e) {
+            return redirect()->route('tasks.index')->with('error', 'Erro ao atualizar o evento no Google Calendar.');
+        }
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+    return redirect()->route('tasks.index')->with('success', 'Tarefa atualizada com sucesso!');
+}
+
     public function destroy($id)
     {
         $task = Task::find($id);

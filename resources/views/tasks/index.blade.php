@@ -61,27 +61,28 @@
 
 
 <!-- Modal -->
-<div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+<div class="modal fade" id="taskModal" tabindex="-1" data-id="" aria-labelledby="taskModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title" id="taskModalLabel">Detalhes da Tarefa</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-      </div>
-      <div class="modal-body">
-        <h4 id="modalTitle"></h4>
-        <p id="modalDescription"></p>
-        <p><strong>Data Limite:</strong> <span id="modalDueDate"></span></p>
-
-        <form action="{{ route('tasks.sync', $task->id) }}" method="POST">
+          <h5 class="modal-title" id="taskModalLabel">Detalhes da Tarefa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <h4 id="modalTitle"></h4>
+          <p id="modalDescription"></p>
+          <p><strong>Data Limite:</strong> <span id="modalDueDate"></span></p>
+          
+          <form action="{{ route('tasks.sync', $task->id) }}" method="POST">
             @csrf
             <button type="submit" class="btn btn-sm btn-outline-primary">Adicionar ao Google Calendar</button>
-        </form>
-
-
-      </div>
-      <div class="modal-footer">
-        <button id="deleteTaskButton" class="btn btn-danger">Deletar Tarefa</button>
+          </form>
+          
+          
+        </div>
+        <div class="modal-footer">
+          <button id="deleteTaskButton" class="btn btn-danger">Deletar Tarefa</button>
+          <button class="btn btn-primary" id="openEditModal">Editar Tarefa</button>
       </div>
     </div>
   </div>
@@ -108,102 +109,174 @@
 
 
 @endsection
+<!-- Modal de Edição -->
+<div class="modal fade" id="editTaskModal" tabindex="-1" aria-labelledby="editTaskModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="editTaskForm" method="POST">
+      @csrf
+      @method('PUT')
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editTaskModalLabel">Editar Tarefa</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" name="task_id" id="editTaskId">
+          <div class="mb-3">
+            <label for="editTitle" class="form-label">Título</label>
+            <input type="text" name="title" class="form-control" id="editTitle" required>
+          </div>
+          <div class="mb-3">
+            <label for="editDescription" class="form-label">Descrição</label>
+            <textarea name="description" class="form-control" id="editDescription"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="editDueDate" class="form-label">Data Limite</label>
+            <input type="date" name="due_date" class="form-control" id="editDueDate">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Salvar</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
 
 @section('scripts')
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-<script>
- // Inicializa Sortable nas colunas
-['to_do', 'in_progress', 'done'].forEach(function(status) {
-    new Sortable(document.getElementById(status), {
-        group: 'shared',
-        animation: 150,
-        onEnd: function (evt) {
-            let taskId = evt.item.dataset.id;
-            let newStatus = evt.to.id;
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+  <script>
+    // Inicializa Sortable nas colunas
+    ['to_do', 'in_progress', 'done'].forEach(function(status) {
+        new Sortable(document.getElementById(status), {
+            group: 'shared',
+            animation: 150,
+            onEnd: function (evt) {
+                let taskId = evt.item.dataset.id;
+                let newStatus = evt.to.id;
 
-            fetch("{{ route('tasks.updateStatus') }}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    id: taskId,
-                    status: newStatus
-                })
-            });
-        }
+                fetch("{{ route('tasks.updateStatus') }}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        id: taskId,
+                        status: newStatus
+                    })
+                });
+            }
+        });
     });
-});
 
-// Delegação de evento de clique no container pai
+    // Delegação de evento de clique no container pai
+    document.querySelectorAll('.card.p-2.mb-3').forEach(function(container) {
+        container.addEventListener('click', function(event) {
+            // só continua se clicou em um .task-item
+            if (event.target.closest('.task-item')) {
+                let item = event.target.closest('.task-item');
+
+                document.getElementById('modalTitle').innerText = item.dataset.title;
+                document.getElementById('modalDescription').innerText = item.dataset.description || 'Sem descrição';
+                document.getElementById('modalDueDate').innerText = item.dataset.dueDate || 'Sem data limite';
+
+                var taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+
+                document.getElementById('taskModal').dataset.id = item.dataset.id;
+
+
+                document.getElementById('deleteTaskButton').setAttribute('data-id', item.dataset.id);
+                document.getElementById('taskModal').style.display = 'block';
+
+                taskModal.show();
+            }
+        });
+    });
+
+
+    let taskIdToDelete = null;
+
+    document.getElementById('deleteTaskButton').addEventListener('click', function () {
+      taskIdToDelete = this.getAttribute('data-id');
+
+      var taskModal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
+      taskModal.hide();
+
+      var confirmModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+      confirmModal.show();
+    });
+
+    // Delegação de clique nas tarefas
 document.querySelectorAll('.card.p-2.mb-3').forEach(function(container) {
-    container.addEventListener('click', function(event) {
-        // só continua se clicou em um .task-item
-        if (event.target.closest('.task-item')) {
-            let item = event.target.closest('.task-item');
+  container.addEventListener('click', function(event) {
+    if (event.target.closest('.task-item')) {
+      let item = event.target.closest('.task-item');
 
-            document.getElementById('modalTitle').innerText = item.dataset.title;
-            document.getElementById('modalDescription').innerText = item.dataset.description || 'Sem descrição';
-            document.getElementById('modalDueDate').innerText = item.dataset.dueDate || 'Sem data limite';
+      document.getElementById('modalTitle').innerText = item.dataset.title;
+      document.getElementById('modalDescription').innerText = item.dataset.description || 'Sem descrição';
+      document.getElementById('modalDueDate').innerText = item.dataset.dueDate || 'Sem data limite';
 
-            var taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
-            
-            document.getElementById('deleteTaskButton').setAttribute('data-id', item.dataset.id);
-            document.getElementById('taskModal').style.display = 'block';
+      document.getElementById('taskModal').dataset.id = item.dataset.id;
+      document.getElementById('deleteTaskButton').setAttribute('data-id', item.dataset.id);
 
-            taskModal.show();
-        }
-    });
-});
+      const taskModal = new bootstrap.Modal(document.getElementById('taskModal'));
+      taskModal.show();
 
+      // ✅ AQUI! Agora sim funciona
+      document.getElementById('openEditModal').onclick = function () {
+        document.getElementById('editTaskId').value = item.dataset.id;
+        document.getElementById('editTitle').value = item.dataset.title;
+        document.getElementById('editDescription').value = item.dataset.description || '';
+        document.getElementById('editDueDate').value = item.dataset.dueDate || '';
 
-let taskIdToDelete = null;
+        bootstrap.Modal.getInstance(document.getElementById('taskModal')).hide();
+        new bootstrap.Modal(document.getElementById('editTaskModal')).show();
 
-document.getElementById('deleteTaskButton').addEventListener('click', function () {
-  taskIdToDelete = this.getAttribute('data-id');
-
-  var taskModal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
-  taskModal.hide();
-
-  var confirmModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-  confirmModal.show();
-});
-
-document.getElementById('confirmDeleteButton').addEventListener('click', function () {
-  if (taskIdToDelete) {
-    deleteTask(taskIdToDelete);
-  }
-});
-
-function deleteTask(taskId) {
-  fetch("/tasks/" + taskId, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        document.getElementById('editTaskForm').action = `/tasks/${item.dataset.id}`;
+      };
     }
-  })
-    .then(response => {
-      if (response.ok) {
-        var taskModal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
-        var confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+  });
+});
 
-        taskModal.hide();
-        confirmModal.hide();
 
-        document.querySelector('[data-id="' + taskId + '"]').remove();
-      } else {
-        alert('Erro ao deletar.');
+
+
+
+    document.getElementById('confirmDeleteButton').addEventListener('click', function () {
+      if (taskIdToDelete) {
+        deleteTask(taskIdToDelete);
       }
-    })
-    .catch(error => {
-      console.error('Erro:', error);
     });
-}
+
+    function deleteTask(taskId) {
+      fetch("/tasks/" + taskId, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': '{{ csrf_token() }}'
+        }
+      })
+        .then(response => {
+          if (response.ok) {
+            var taskModal = bootstrap.Modal.getInstance(document.getElementById('taskModal'));
+            var confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmDeleteModal'));
+
+            taskModal.hide();
+            confirmModal.hide();
+
+            document.querySelector('[data-id="' + taskId + '"]').remove();
+          } else {
+            alert('Erro ao deletar.');
+          }
+        })
+        .catch(error => {
+          console.error('Erro:', error);
+        });
+    }
+
+    
 
 
-
-
-</script>
+  </script>
 @endsection
