@@ -1,5 +1,5 @@
 # Etapa 1: Build dos assets com Vite
-FROM node:18 AS node_builder
+FROM node:23-slim AS node_builder
 
 WORKDIR /app
 
@@ -9,9 +9,12 @@ RUN npm install
 COPY . .
 RUN npm run build
 
+# Copia os arquivos compilados do Vite para a pasta pública
+COPY --from=node /app/public /var/www/html/public
+
 
 # Etapa 2: App Laravel com PHP
-FROM php:8.2-cli
+FROM php:8.4-cli
 
 # Instalar extensões e ferramentas necessárias
 RUN apt-get update && apt-get install -y \
@@ -46,5 +49,11 @@ RUN chmod -R 775 storage bootstrap/cache && chown -R www-data:www-data .
 # Cache de configuração
 RUN php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache
 
+RUN ls -la /var/www/html/public/build && cat /var/www/html/public/build/manifest.json
+
 # Rodar as migrations na inicialização e subir o servidor embutido
 CMD php artisan migrate --force && php -S 0.0.0.0:80 -t public
+
+RUN chown -R www-data:www-data /var/www/html/public/build && \
+    chmod -R 775 /var/www/html/public/build
+
