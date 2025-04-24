@@ -36,5 +36,8 @@ RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /e
 # Expor porta 80 (usada pelo Apache)
 EXPOSE 80
 
+RUN php artisan config:clear && php artisan config:cache
+
+
 # Comando final: executar migrations e iniciar Apache
 CMD php artisan migrate --force && apache2-foreground
