@@ -3,13 +3,19 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\GoogleController;
 
+
+Route::get('/test-error', function () {
+    Log::error('Erro de teste no Laravel!');
+    abort(500, 'Forçando erro para debug.');
+});
+
+
 Route::get('/', function () {
     return view('auth.login');
 });
 
 Auth::routes();
 
-Route::get('/home', [TaskController::class, 'index'])->name('home'); // nome diferente!
 
 Route::resource('tasks', TaskController::class)->middleware('auth');
 
