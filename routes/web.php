@@ -25,3 +25,8 @@ Route::post('/tasks/{task}/sync', [TaskController::class, 'syncWithGoogle'])->na
 
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.auth');
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
+
+Route::get('/ping', function () {
+    return 'pong';
+});
+
