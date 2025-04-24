@@ -44,6 +44,13 @@ COPY --from=node_builder /app/public/build /var/www/html/public/build
 # Instalar dependências do Composer
 RUN composer install --no-interaction --prefer-dist
 
+# Instalar Node.js e npm
+RUN apt-get install -y curl && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs
+
+# Instalar dependências e build Vite
+RUN npm install && npm run build
+
+
 # Ajustar permissões
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
