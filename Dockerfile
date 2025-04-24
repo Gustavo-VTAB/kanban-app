@@ -1,5 +1,5 @@
 # Etapa 1: Construção dos ativos com Node.js
-FROM node:18 AS node_builder
+FROM node_builder
 
 WORKDIR /app
 
@@ -15,8 +15,6 @@ COPY . .
 # Executar o build do Vite
 RUN npm run build
 
-# Etapa 2: Configuração do ambiente PHP com Apache
-FROM php:8.2-apache
 
 # Instalar dependências do PHP
 RUN apt-get update && apt-get install -y \
@@ -68,4 +66,4 @@ EXPOSE 80
 RUN php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache
 
 # Executar as migrações e iniciar o Apache
-CMD php artisan migrate --force && apache2-foreground
+CMD php artisan migrate --force
