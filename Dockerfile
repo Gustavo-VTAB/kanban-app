@@ -1,69 +1,50 @@
-# Etapa 1: Construção dos ativos com Node.js
-FROM node_builder
+# Etapa 1: Build dos assets com Vite
+FROM node:18 AS node_builder
 
 WORKDIR /app
 
-# Copiar arquivos de dependências
 COPY package*.json ./
-
-# Instalar dependências do Node.js
 RUN npm install
 
-# Copiar o restante dos arquivos do projeto
 COPY . .
-
-# Executar o build do Vite
 RUN npm run build
 
 
-# Instalar dependências do PHP
+# Etapa 2: App Laravel com PHP
+FROM php:8.2-cli
+
+# Instalar extensões e ferramentas necessárias
 RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg62-turbo-dev \
     libfreetype6-dev \
     zip \
     git \
+    unzip \
     curl \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install gd pdo pdo_mysql
+    libonig-dev \
+    libxml2-dev \
+    && docker-php-ext-install pdo pdo_mysql gd
 
-# Instalar o Composer
+# Instalar Composer
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Definir o diretório de trabalho
 WORKDIR /var/www/html
 
-# Copiar arquivos PHP do projeto
+# Copiar o projeto Laravel
 COPY . .
 
-# Copiar os arquivos compilados do Vite da etapa anterior
+# Copiar os arquivos compilados do Vite
 COPY --from=node_builder /app/public/build /var/www/html/public/build
 
-# Instalar dependências do Composer
-RUN composer install --no-interaction --prefer-dist
-
-# Instalar Node.js e npm
-RUN apt-get install -y curl && curl -fsSL https://deb.nodesource.com/setup_18.x | bash - && apt-get install -y nodejs
-
-# Instalar dependências e build Vite
-RUN npm install && npm run build
-
+# Instalar dependências do PHP
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
 # Ajustar permissões
-RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+RUN chmod -R 775 storage bootstrap/cache && chown -R www-data:www-data .
 
-# Ativar o mod_rewrite do Apache
-RUN a2enmod rewrite
-
-# Configurar o Apache para apontar para o diretório 'public' do Laravel
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
-
-# Expor a porta 80
-EXPOSE 80
-
-# Comandos para limpar e cachear configurações
+# Cache de configuração
 RUN php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache
 
-# Executar as migrações e iniciar o Apache
-CMD php artisan migrate --force
+# Rodar as migrations na inicialização e subir o servidor embutido
+CMD php artisan migrate --force && php -S 0.0.0.0:80 -t public
