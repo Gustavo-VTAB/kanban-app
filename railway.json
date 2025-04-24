@@ -4,6 +4,6 @@
     "buildCommand": "composer install --no-dev --optimize-autoloader && php artisan config:cache"
   },
   "deploy": {
-    "startCommand": "until nc -z -v -w30 $DB_HOST $DB_PORT; do echo 'Aguardando o MySQL...'; sleep 2; done && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=$PORT"
+   
   }
 }
