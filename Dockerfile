@@ -9,8 +9,7 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Copia os arquivos compilados do Vite para a pasta pública
-COPY --from=node /app/public /var/www/html/public
+COPY --from=node_builder /app/public /var/www/html/public
 
 
 # Etapa 2: App Laravel com PHP
