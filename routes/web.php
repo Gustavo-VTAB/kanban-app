@@ -1,8 +1,9 @@
 <?php
-
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\GoogleController;
+
 
 Route::get('/', function () {
     return view('auth.login');
@@ -23,4 +24,17 @@ Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name(
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback']);
 
 Route::post('/tasks/{task}/sync', [TaskController::class, 'syncWithGoogle'])->name('tasks.sync');
+
+Route::get('/run-migrations/{secret}', function ($secret) {
+    if ($secret !== env('MIGRATE_SECRET')) {
+        abort(403, 'Acesso negado');
+    }
+
+    Artisan::call('migrate', ['--force' => true]);
+
+    return response()->json([
+        'status' => 'ok',
+        'message' => 'Migrações executadas com sucesso!'
+    ]);
+});
 
